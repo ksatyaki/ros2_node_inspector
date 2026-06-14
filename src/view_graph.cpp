@@ -134,9 +134,7 @@ std::string render_graph_view(const NodeView & view, GraphState & gs,
     const ImVec2 peer_screen = to_screen(s.world);
     const EdgeStatus st = s.conn->status();
     const ImU32 scol = status_color(st);
-    const ImU32 line_col = (st == EdgeStatus::Ok)
-                             ? with_alpha(pal::accent, 0.9f)
-                             : with_alpha(scol, 0.85f);
+    const ImU32 line_col = with_alpha(scol, 0.85f);
 
     dl->AddLine(center_screen, peer_screen, line_col, std::max(1.5f, 2.0f * zoom));
 
@@ -166,23 +164,24 @@ std::string render_graph_view(const NodeView & view, GraphState & gs,
 
   dl->PopClipRect();
 
-  // Screen-space hit-testing. A click (not a pan-drag) hits icons first, then
-  // peer boxes. Pan drags are excluded via the accumulated drag distance.
+  // Screen-space hit-testing.
   std::string recenter;
-  if (hovered && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-    const ImVec2 dd = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-    if (dd.x * dd.x + dd.y * dd.y < 36.0f) {  // < 6px => treat as click
-      const ImVec2 m = io.MousePos;
-      bool handled = false;
-      for (const auto & h : icon_hits) {
-        const float dx = m.x - h.c.x, dy = m.y - h.c.y;
-        if (dx * dx + dy * dy <= h.r * h.r) {
-          popup.request(*h.conn);
-          handled = true;
-          break;
-        }
+  if (hovered) {
+    const ImVec2 m = io.MousePos;
+    
+    // Check hover for tooltips
+    for (const auto & h : icon_hits) {
+      const float dx = m.x - h.c.x, dy = m.y - h.c.y;
+      if (dx * dx + dy * dy <= h.r * h.r) {
+        popup.request_hover(*h.conn);
+        break;
       }
-      if (!handled) {
+    }
+
+    // Check clicks for centering
+    if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+      const ImVec2 dd = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+      if (dd.x * dd.x + dd.y * dd.y < 36.0f) {  // < 6px => treat as click
         for (const auto & h : node_hits) {
           if (std::fabs(m.x - h.c.x) <= h.half.x &&
               std::fabs(m.y - h.c.y) <= h.half.y) {

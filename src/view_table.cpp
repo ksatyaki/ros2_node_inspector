@@ -1,5 +1,6 @@
 #include "view_table.hpp"
 
+#include <cmath>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -70,8 +71,9 @@ void draw_section(const char * heading, const std::vector<Connection> & edges,
     const ImVec2 p = ImGui::GetCursorScreenPos();
     char id[64];
     std::snprintf(id, sizeof(id), "##st_%s_%d", table_id, row);
-    if (icon_button(id, p, h)) {
-      popup.request(c);
+    icon_button(id, p, h);
+    if (ImGui::IsItemHovered()) {
+      popup.request_hover(c);
     }
     draw_status_icon(ImGui::GetWindowDrawList(), c.status(),
                      ImVec2(p.x + h * 0.5f, p.y + h * 0.5f), h * 0.42f);
@@ -84,6 +86,21 @@ void draw_section(const char * heading, const std::vector<Connection> & edges,
 
 void render_table_view(const NodeView & view, StatusPopup & popup)
 {
+  bool determining = false;
+  for (const auto & c : view.publishes) if (!c.hz_known) determining = true;
+  for (const auto & c : view.subscribes) if (!c.hz_known) determining = true;
+
+  if (determining) {
+    float alpha = 0.5f + 0.5f * std::sin(ImGui::GetTime() * 5.0f);
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, alpha));
+    const char * msg = "Determining rate...";
+    float w = ImGui::CalcTextSize(msg).x;
+    ImGui::SetCursorPosX((ImGui::GetWindowWidth() - w) * 0.5f);
+    ImGui::TextUnformatted(msg);
+    ImGui::PopStyleColor();
+    ImGui::Dummy(ImVec2(0, 6));
+  }
+
   draw_section("Publishes \xe2\x86\x92", view.publishes, "tbl_pub", popup);
   ImGui::Dummy(ImVec2(0, 6));
   draw_section("\xe2\x86\x90 Subscribes", view.subscribes, "tbl_sub", popup);

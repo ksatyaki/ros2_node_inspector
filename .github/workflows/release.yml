@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+
+jobs:
+  build_and_release:
+    strategy:
+      matrix:
+        include:
+          - ros_distribution: humble
+            ubuntu_version: ubuntu-22.04
+          - ros_distribution: jazzy
+            ubuntu_version: ubuntu-24.04
+    runs-on: ${{ matrix.ubuntu_version }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup ROS 2
+        uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: ${{ matrix.ros_distribution }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          rosdep update
+          rosdep install --from-paths . --ignore-src -r -y --rosdistro ${{ matrix.ros_distribution }}
+
+      - name: Build
+        run: |
+          source /opt/ros/${{ matrix.ros_distribution }}/setup.bash
+          colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+
+      - name: Package Artifacts
+        run: |
+          tar -czvf ros2_node_inspector-${{ matrix.ros_distribution }}.tar.gz install/
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ros2_node_inspector-${{ matrix.ros_distribution }}
+          path: ros2_node_inspector-${{ matrix.ros_distribution }}.tar.gz
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ros2_node_inspector-${{ matrix.ros_distribution }}.tar.gz
+          generate_release_notes: true

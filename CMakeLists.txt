@@ -84,6 +84,14 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/fonts/fa-solid-900.ttf)
   install(FILES third_party/fonts/fa-solid-900.ttf
     DESTINATION share/${PROJECT_NAME}/fonts)
 endif()
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/fonts/PT_Sans-Web-Regular.ttf)
+  install(FILES third_party/fonts/PT_Sans-Web-Regular.ttf
+    DESTINATION share/${PROJECT_NAME}/fonts)
+endif()
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/fonts/PT_Sans-Web-Bold.ttf)
+  install(FILES third_party/fonts/PT_Sans-Web-Bold.ttf
+    DESTINATION share/${PROJECT_NAME}/fonts)
+endif()
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)

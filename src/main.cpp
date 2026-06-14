@@ -9,6 +9,7 @@
 // Keeping every rclcpp call on the one ROS thread sidesteps subscription
 // lifetime races entirely.
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdio>
@@ -162,24 +163,19 @@ void draw_counts_inline(const rni::StatusCounts & c)
 }
 
 // Returns the fq of a newly selected node, or "" if selection unchanged.
-std::string draw_dropdown(const std::vector<NodeEntry> & nodes,
-                          const std::string & selected_fq)
+std::string draw_left_pane(const std::vector<NodeEntry> & nodes,
+                           const std::string & selected_fq)
 {
   std::string result;
-  const char * preview = selected_fq.empty() ? "(no node selected)"
-                                             : selected_fq.c_str();
-  ImGui::SetNextItemWidth(420.0f);
-  if (ImGui::BeginCombo("##node", preview)) {
-    for (const auto & e : nodes) {
-      const bool sel = (e.fq == selected_fq);
-      if (ImGui::Selectable(e.fq.c_str(), sel,
-                            ImGuiSelectableFlags_AllowOverlap)) {
-        result = e.fq;
-      }
-      draw_counts_inline(e.counts);
-      if (sel) ImGui::SetItemDefaultFocus();
+  std::vector<NodeEntry> sorted = nodes;
+  std::sort(sorted.begin(), sorted.end(), [](const auto &a, const auto &b){ return a.fq < b.fq; });
+
+  for (const auto & e : sorted) {
+    const bool sel = (e.fq == selected_fq);
+    if (ImGui::Selectable(e.fq.c_str(), sel, ImGuiSelectableFlags_AllowOverlap)) {
+      result = e.fq;
     }
-    ImGui::EndCombo();
+    draw_counts_inline(e.counts);
   }
   return result;
 }
@@ -240,9 +236,20 @@ int main(int argc, char ** argv)
   rni::GraphState graph_state;
   std::string last_selected;
   int tab = 0;  // 0 = table, 1 = graph
+  float font_size_px = 16.0f;
+  bool needs_font_rebuild = false;
 
   while (!glfwWindowShouldClose(window) && rclcpp::ok()) {
     glfwPollEvents();
+
+    if (needs_font_rebuild) {
+      ImGui_ImplOpenGL3_DestroyFontsTexture();
+      ImGui::GetIO().Fonts->Clear();
+      rni::load_ui_font(font_size_px);
+      rni::try_load_fontawesome(font_size_px * (14.0f / 16.0f));
+      ImGui_ImplOpenGL3_CreateFontsTexture();
+      needs_font_rebuild = false;
+    }
 
     // Copy the snapshot under lock; render from the copy (no lock during ImGui).
     std::vector<NodeEntry> nodes;
@@ -271,16 +278,31 @@ int main(int argc, char ** argv)
                  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
                  ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-    ImGui::TextUnformatted("Node:");
+    ImGui::BeginChild("left_pane", ImVec2(320.0f, 0), true);
+    ImGui::TextDisabled("Nodes (%zu)", nodes.size());
     ImGui::SameLine();
-    const std::string picked = draw_dropdown(nodes, selected_fq);
+    if (ImGui::Button("-")) {
+      font_size_px = std::max(10.0f, font_size_px - 1.0f);
+      needs_font_rebuild = true;
+    }
+    ImGui::SameLine();
+    ImGui::Text("%.0f px", font_size_px);
+    ImGui::SameLine();
+    if (ImGui::Button("+")) {
+      font_size_px = std::min(48.0f, font_size_px + 1.0f);
+      needs_font_rebuild = true;
+    }
+    ImGui::Separator();
+    const std::string picked = draw_left_pane(nodes, selected_fq);
     if (!picked.empty()) {
       std::lock_guard<std::mutex> lk(shared.mtx);
       shared.requested_fq = picked;
       shared.has_request = true;
     }
+    ImGui::EndChild();
+
     ImGui::SameLine();
-    ImGui::TextDisabled("(%zu nodes)", nodes.size());
+    ImGui::BeginChild("right_pane", ImVec2(0, 0), false);
 
     if (ImGui::BeginTabBar("views")) {
       if (ImGui::BeginTabItem("Table")) {
@@ -307,6 +329,7 @@ int main(int argc, char ** argv)
         shared.has_request = true;
       }
     }
+    ImGui::EndChild();
     ImGui::EndChild();
 
     popup.render();

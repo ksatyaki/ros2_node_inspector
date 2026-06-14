@@ -12,12 +12,19 @@ StatusCounts count_connections(const NodeView & view)
 {
   StatusCounts counts;
   auto classify = [&counts](const Connection & c) {
-    if (!c.type_match) {
-      ++counts.err;          // type mismatch dominates
-    } else if (!c.qos.compatible) {
-      ++counts.warn;         // QoS incompatible
-    } else {
-      ++counts.ok;           // type + QoS both fine
+    switch (c.status()) {
+      case EdgeStatus::Ok:
+      case EdgeStatus::Latched:
+      case EdgeStatus::Unknown:
+        ++counts.ok;
+        break;
+      case EdgeStatus::QosMismatch:
+        ++counts.warn;
+        break;
+      case EdgeStatus::TypeMismatch:
+      case EdgeStatus::Dead:
+        ++counts.err;
+        break;
     }
   };
   for (const auto & c : view.publishes) classify(c);

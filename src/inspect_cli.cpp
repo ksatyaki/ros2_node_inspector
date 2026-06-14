@@ -21,6 +21,7 @@ const char * status_word(rni::EdgeStatus s)
 {
   switch (s) {
     case rni::EdgeStatus::Ok:           return "OK   ";
+    case rni::EdgeStatus::Latched:      return "LATCH";
     case rni::EdgeStatus::QosMismatch:  return "QOS? ";
     case rni::EdgeStatus::TypeMismatch: return "TYPEX";
     case rni::EdgeStatus::Dead:         return "DEAD ";

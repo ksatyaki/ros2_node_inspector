@@ -24,8 +24,16 @@ public:
     open_ = true;
   }
 
+  void request_hover(const Connection & c)
+  {
+    text_ = status_detail(c);
+    color_ = status_color(c.status());
+    hovered_this_frame_ = true;
+  }
+
   void render()
   {
+    // The old click-driven popup logic
     if (open_) {
       ImGui::OpenPopup("status_detail");
       open_ = false;
@@ -38,12 +46,28 @@ public:
       ImGui::TextUnformatted(text_.c_str());
       ImGui::EndPopup();
     }
+
+    // The new hover-driven tooltip logic
+    if (hovered_this_frame_) {
+      ImGui::PushStyleColor(ImGuiCol_PopupBg, IM_COL32(0x1A, 0x1B, 0x26, 0xFF)); // old default bg
+      ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(0x7A, 0xA2, 0xF7, 0xFF)); // old default accent
+      ImGui::BeginTooltip();
+      ImGui::PushStyleColor(ImGuiCol_Text, ImColor(color_).Value);
+      ImGui::TextUnformatted("\xe2\x97\x8f");
+      ImGui::PopStyleColor();
+      ImGui::SameLine();
+      ImGui::TextUnformatted(text_.c_str());
+      ImGui::EndTooltip();
+      ImGui::PopStyleColor(2);
+      hovered_this_frame_ = false;
+    }
   }
 
 private:
   std::string text_;
   ImU32 color_ = 0;
   bool open_ = false;
+  bool hovered_this_frame_ = false;
 };
 
 // An invisible button matching the icon's bounding box, so a click anywhere on
