@@ -8,7 +8,7 @@
 >
 > ## Milestone status board
 > - [x] **M0 — Project setup** · gate: devcontainer opens, image builds, Claude runs inside, first commit exists *(no GUI, no unit tests — gate is "container comes up")*
-> - [ ] **M1 — Backend & diagnostics** · gate: **unit tests pass** (non-GUI)
+> - [x] **M1 — Backend & diagnostics** · gate: **unit tests pass** (non-GUI) *(28 gtests green + clean Humble build; Jazzy compile pending host-side `docker compose run` — docker is unavailable inside the Humble devcontainer)*
 > - [ ] **M2 — GUI: views, icons, dropdown counts** · gate: **human manual test run** (GUI)
 
 **Goal:** A lightweight C++ GUI that lists every live ROS 2 node in a dropdown; on selecting a node, shows its direct connections (publishers/subscribers it talks to) in **two interchangeable views — a table and an ego graph** — each connection carrying a single status icon (**green tick** = healthy, **amber question** = QoS incompatible, **red cross** = type mismatch or dead) that, on click, opens a popup explaining the fault in plain language (e.g. "`/map`: publisher `node_a` offers TRANSIENT_LOCAL, subscriber `node_b` requests VOLATILE → incompatible"). So a developer can diagnose a broken topic link in seconds instead of polling the CLI.
@@ -337,14 +337,14 @@ Work one milestone per run (see Agent Protocol at top). Each lists its tasks and
 
 ### M1 — Backend & diagnostics  ·  gate: unit tests pass (non-GUI)
 *Pure logic + ROS graph reads. No window. Everything here is gtest-verifiable.*
-- [ ] Scaffold ament_cmake package: `package.xml` (`<depend>rclcpp</depend>`), `CMakeLists.txt` (`CMAKE_CXX_STANDARD 20`, export compile commands), `test/` wired with `ament_add_gtest`.
-- [ ] `graph_model`: build `NodeView` from the rclcpp graph APIs; resolve peers/types/QoS for a selected node.
-- [ ] `qos_compat` → `QosVerdict`: RxO per-policy with failing policy + offered/requested.
-- [ ] `status.hpp`: `EdgeStatus::status()` precedence + popup-text builder.
-- [ ] `liveness_probe`: generic subscriptions adopting peer offered QoS, trailing-window Hz, create/destroy on selection change.
-- [ ] Dropdown count aggregation (type/QoS only, all nodes) as a pure function over the model.
-- [ ] **Tests:** qos_compat (BEST_EFFORT pub→RELIABLE sub = incompatible/reliability; RELIABLE→BEST_EFFORT = OK; VOLATILE pub→TRANSIENT_LOCAL sub = incompatible/durability); status precedence (type beats qos beats dead); count aggregation. graph_model + liveness verified against a `talker`/`listener` demo (integration-style, can be a manual harness if not pure-unit).
-- [ ] **Gate:** `colcon test` green on Humble; also `docker compose run --rm app-jazzy colcon build` compiles.
+- [x] Scaffold ament_cmake package: `package.xml` (`<depend>rclcpp</depend>`), `CMakeLists.txt` (`CMAKE_CXX_STANDARD 20`, export compile commands), `test/` wired with `ament_add_gtest`.
+- [x] `graph_model`: build `NodeView` from the rclcpp graph APIs; resolve peers/types/QoS for a selected node. *(by-node listers live on `NodeGraphInterface`, not `Node`.)*
+- [x] `qos_compat` → `QosVerdict`: RxO per-policy with failing policy + offered/requested.
+- [x] `status.hpp`: `EdgeStatus::status()` precedence + popup-text builder.
+- [x] `liveness_probe`: generic subscriptions adopting peer offered QoS, trailing-window Hz, create/destroy on selection change. *(probe QoS must normalise history: TopicEndpointInfo reports history=UNKNOWN/depth=0 over DDS discovery, which rcl rejects with a misleading "invalid allocator"; history isn't part of RxO so we force KEEP_LAST while preserving the discoverable policies.)*
+- [x] Dropdown count aggregation (type/QoS only, all nodes) as a pure function over the model.
+- [x] **Tests:** qos_compat (BEST_EFFORT pub→RELIABLE sub = incompatible/reliability; RELIABLE→BEST_EFFORT = OK; VOLATILE pub→TRANSIENT_LOCAL sub = incompatible/durability); status precedence (type beats qos beats dead); count aggregation; RateWindow Hz math. graph_model + liveness verified via the `inspect_cli` manual harness against `talker`/`listener` (`/chatter` reads live 4 Hz, `/parameter_events` reads DEAD).
+- [x] **Gate:** `colcon test` green on Humble (28 tests). ⚠ `docker compose run --rm app-jazzy colcon build` not run — docker is unavailable inside the Humble devcontainer; **run on the host to confirm Jazzy**.
 
 ### M2 — GUI: views, icons, dropdown counts  ·  gate: human manual test run (GUI)
 *Everything visual. Renders the M1 model.*

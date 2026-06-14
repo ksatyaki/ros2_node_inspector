@@ -16,7 +16,14 @@
   "postCreateCommand": "npm install -g @anthropic-ai/claude-code",
   "customizations": {
     "vscode": {
-      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools", "ms-iot.vscode-ros"]
+      "extensions": [
+        "anthropic.claude-code",        // Claude Code
+        "ms-vscode.cpptools",           // C/C++ IntelliSense & debugging
+        "ms-vscode.cmake-tools",        // CMake build integration
+        "ms-iot.vscode-ros",            // ROS/ROS2 tooling
+        "ms-python.python",             // Python (launch files, ament_python nodes)
+        "redhat.vscode-xml"             // package.xml / launch / URDF
+      ]
     }
   }
 }

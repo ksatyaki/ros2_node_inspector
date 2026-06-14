@@ -4,6 +4,7 @@ services:
     user: "1000:1000"
     network_mode: host                                   # DDS discovery
     environment: [ "DISPLAY=${DISPLAY}" ]
+    command: sleep infinity                              # keep container alive for devcontainer exec
     volumes:
       - .:/home/ros/ws/src/ros2_node_inspector
       - /tmp/.X11-unix:/tmp/.X11-unix                    # X11 (Linux host assumed)
@@ -12,6 +13,7 @@ services:
     user: "1000:1000"
     network_mode: host
     environment: [ "DISPLAY=${DISPLAY}" ]
+    command: sleep infinity
     volumes:
       - .:/home/ros/ws/src/ros2_node_inspector
       - /tmp/.X11-unix:/tmp/.X11-unix
