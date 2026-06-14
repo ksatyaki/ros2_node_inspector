@@ -80,6 +80,12 @@ NodeView build_node_view(rclcpp::Node & node,
       c.topic = topic;
       c.self_node = view.name;
       c.peer_node = fq_name(sub.node_namespace(), sub.node_name());
+
+      // Skip the inspector itself appearing as a child peer
+      if (c.peer_node == std::string(node.get_fully_qualified_name())) {
+        continue;
+      }
+
       c.my_type = my_type;
       c.peer_type = sub.topic_type();
       c.my_qos = my_qos;
@@ -106,6 +112,12 @@ NodeView build_node_view(rclcpp::Node & node,
       c.topic = topic;
       c.self_node = view.name;
       c.peer_node = fq_name(pub.node_namespace(), pub.node_name());
+
+      // Skip the inspector itself appearing as a child peer
+      if (c.peer_node == std::string(node.get_fully_qualified_name())) {
+        continue;
+      }
+
       c.my_type = my_type;
       c.peer_type = pub.topic_type();
       c.my_qos = my_qos;

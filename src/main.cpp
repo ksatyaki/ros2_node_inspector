@@ -108,6 +108,12 @@ void ros_thread(rclcpp::Node::SharedPtr node, Shared * sh)
       e.name = name;
       e.ns = ns;
       e.fq = (ns == "/" ? "/" : ns + "/") + name;
+      
+      // Filter out the inspector node itself from the list
+      if (e.fq == std::string(node->get_fully_qualified_name())) {
+        continue;
+      }
+
       e.counts = rni::count_connections(rni::build_node_view(*node, name, ns));
       entries.push_back(std::move(e));
     }
@@ -131,8 +137,14 @@ void ros_thread(rclcpp::Node::SharedPtr node, Shared * sh)
         probe.clear();          // selection changed: drop old probes
         active_fq = want;
       }
-      probe.reconfigure(*node, view);
-      probe.apply(view);
+      
+      // Do not probe ourselves, to prevent self-inspection feedback loops.
+      if (want == std::string(node->get_fully_qualified_name())) {
+        probe.clear();
+      } else {
+        probe.reconfigure(*node, view);
+        probe.apply(view);
+      }
     } else {
       probe.clear();
       active_fq.clear();
@@ -235,7 +247,7 @@ int main(int argc, char ** argv)
   rni::StatusPopup popup;
   rni::GraphState graph_state;
   std::string last_selected;
-  int tab = 0;  // 0 = table, 1 = graph
+  int tab = 1;  // 0 = table, 1 = graph
   float font_size_px = 16.0f;
   bool needs_font_rebuild = false;
 
@@ -305,12 +317,12 @@ int main(int argc, char ** argv)
     ImGui::BeginChild("right_pane", ImVec2(0, 0), false);
 
     if (ImGui::BeginTabBar("views")) {
-      if (ImGui::BeginTabItem("Table")) {
-        tab = 0;
-        ImGui::EndTabItem();
-      }
       if (ImGui::BeginTabItem("Graph")) {
         tab = 1;
+        ImGui::EndTabItem();
+      }
+      if (ImGui::BeginTabItem("Table")) {
+        tab = 0;
         ImGui::EndTabItem();
       }
       ImGui::EndTabBar();

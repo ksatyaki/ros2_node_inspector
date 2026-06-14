@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -18,22 +19,7 @@ constexpr float kRowY = 70.0f;    // vertical spacing between peers on a side
 constexpr float kIconR = 9.0f;    // status icon radius (world units)
 constexpr float kLabelHideZoom = 0.55f;  // below this, draw icon only
 
-// One drawn peer: its box center in world space + the connection it represents.
-struct Slot {
-  ImVec2 world;            // box center
-  const Connection * conn;
-};
-
-// Lay peers out in a vertical column centered on world-y 0.
-void layout_column(const std::vector<Connection> & edges, float x,
-                   std::vector<Slot> & out)
-{
-  const int n = static_cast<int>(edges.size());
-  for (int i = 0; i < n; ++i) {
-    const float y = (static_cast<float>(i) - (n - 1) * 0.5f) * kRowY;
-    out.push_back({ImVec2(x, y), &edges[i]});
-  }
-}
+// (Layout removed)
 
 ImU32 with_alpha(ImU32 c, float a)
 {
@@ -98,11 +84,29 @@ std::string render_graph_view(const NodeView & view, GraphState & gs,
                   center.y + gs.pan.y + w.y * zoom);
   };
 
-  // Layout: subscribers we publish to on the RIGHT, publishers we subscribe to
-  // on the LEFT. Direction read from side -> no arrowheads needed.
-  std::vector<Slot> slots;
-  layout_column(view.publishes, +kColX, slots);
-  layout_column(view.subscribes, -kColX, slots);
+  // Group connections by peer
+  std::vector<std::string> unique_peers;
+  std::map<std::string, std::vector<const Connection*>> peer_connections;
+
+  auto add_connections = [&](const std::vector<Connection>& conns) {
+    for (const auto& c : conns) {
+      if (std::find(unique_peers.begin(), unique_peers.end(), c.peer_node) == unique_peers.end()) {
+        unique_peers.push_back(c.peer_node);
+      }
+      peer_connections[c.peer_node].push_back(&c);
+    }
+  };
+  add_connections(view.publishes);
+  add_connections(view.subscribes);
+
+  // Position peers in a circle
+  const int n_peers = unique_peers.size();
+  std::map<std::string, ImVec2> peer_positions;
+  const float PI = 3.14159265f;
+  for (int i = 0; i < n_peers; ++i) {
+    float angle = i * 2.0f * PI / std::max(1, n_peers) - PI / 2.0f;
+    peer_positions[unique_peers[i]] = ImVec2(kColX * std::cos(angle), kColX * std::sin(angle));
+  }
 
   const ImVec2 box_half(kBoxW * 0.5f * zoom, kBoxH * 0.5f * zoom);
   const float label_fs = std::clamp(ImGui::GetFontSize() * zoom, 9.0f, 26.0f);
@@ -129,34 +133,128 @@ std::string render_graph_view(const NodeView & view, GraphState & gs,
   std::vector<IconHit> icon_hits;
   std::vector<NodeHit> node_hits;
 
-  // Edges + peer boxes + edge icons.
-  for (const auto & s : slots) {
-    const ImVec2 peer_screen = to_screen(s.world);
-    const EdgeStatus st = s.conn->status();
-    const ImU32 scol = status_color(st);
-    const ImU32 line_col = with_alpha(scol, 0.85f);
+  // Pass 1: Draw lines and arrowheads.
+  for (const auto& peer : unique_peers) {
+    const ImVec2 peer_screen = to_screen(peer_positions[peer]);
+    const auto& conns = peer_connections[peer];
+    const int num_conns = static_cast<int>(conns.size());
 
-    dl->AddLine(center_screen, peer_screen, line_col, std::max(1.5f, 2.0f * zoom));
-
-    // Mid-edge: topic label (hidden when zoomed out) + status icon beside it.
-    const ImVec2 mid((center_screen.x + peer_screen.x) * 0.5f,
-                     (center_screen.y + peer_screen.y) * 0.5f);
-    const float ir = std::max(5.0f, kIconR * zoom);
-    if (zoom >= kLabelHideZoom) {
-      const ImVec2 ts =
-        font->CalcTextSizeA(label_fs, FLT_MAX, 0.0f, s.conn->topic.c_str());
-      const ImVec2 tp(mid.x - ts.x * 0.5f, mid.y - ts.y - ir - 2.0f);
-      dl->AddRectFilled(ImVec2(tp.x - 3, tp.y - 1), ImVec2(tp.x + ts.x + 3, tp.y + ts.y + 1),
-                        with_alpha(pal::panel, 0.85f), 3.0f);
-      dl->AddText(font, label_fs, tp, pal::text_dim, s.conn->topic.c_str());
+    ImVec2 dir(peer_screen.x - center_screen.x, peer_screen.y - center_screen.y);
+    const float len = std::hypot(dir.x, dir.y);
+    ImVec2 norm(0, 0);
+    ImVec2 d_norm(0, 0);
+    if (len > 0) {
+      d_norm = ImVec2(dir.x / len, dir.y / len);
+      norm = ImVec2(-d_norm.y, d_norm.x);
     }
-    const ImVec2 icon_c(mid.x, mid.y + (zoom >= kLabelHideZoom ? 0.0f : 0.0f));
-    dl->AddCircleFilled(icon_c, ir + 2.0f, pal::panel);
-    draw_status_icon(dl, st, icon_c, ir);
-    icon_hits.push_back({icon_c, ir + 3.0f, s.conn});
 
-    draw_box(peer_screen, s.conn->peer_node, pal::panel, pal::edge);
-    node_hits.push_back({peer_screen, box_half, s.conn->peer_node});
+    const float edge_spacing = 30.0f * zoom;
+
+    for (int j = 0; j < num_conns; ++j) {
+      const Connection* conn = conns[j];
+      const float offset = (j - (num_conns - 1) * 0.5f) * edge_spacing;
+      
+      const ImVec2 p0(center_screen.x + norm.x * offset, center_screen.y + norm.y * offset);
+      const ImVec2 p1(peer_screen.x + norm.x * offset, peer_screen.y + norm.y * offset);
+
+      const EdgeStatus st = conn->status();
+      const ImU32 scol = status_color(st);
+      const ImU32 line_col = with_alpha(scol, 0.85f);
+
+      dl->AddLine(p0, p1, line_col, std::max(1.5f, 2.0f * zoom));
+
+      // Draw arrowhead
+      ImVec2 tip;
+      ImVec2 arrow_dir;
+      
+      auto box_intersect = [](ImVec2 start, ImVec2 d, ImVec2 half) -> float {
+        float t_min = FLT_MAX;
+        if (std::abs(d.x) > 1e-5f) {
+          float t1 = (half.x - start.x) / d.x;
+          float t2 = (-half.x - start.x) / d.x;
+          if (t1 > 0 && t1 < t_min) t_min = t1;
+          if (t2 > 0 && t2 < t_min) t_min = t2;
+        }
+        if (std::abs(d.y) > 1e-5f) {
+          float t1 = (half.y - start.y) / d.y;
+          float t2 = (-half.y - start.y) / d.y;
+          if (t1 > 0 && t1 < t_min) t_min = t1;
+          if (t2 > 0 && t2 < t_min) t_min = t2;
+        }
+        return t_min == FLT_MAX ? 0.0f : t_min;
+      };
+
+      if (conn->direction == Direction::Publishes) {
+        arrow_dir = d_norm;
+        float t = box_intersect(ImVec2(norm.x * offset, norm.y * offset), 
+                                ImVec2(-d_norm.x, -d_norm.y), box_half);
+        tip = ImVec2(p1.x - d_norm.x * t, p1.y - d_norm.y * t);
+      } else {
+        arrow_dir = ImVec2(-d_norm.x, -d_norm.y);
+        float t = box_intersect(ImVec2(norm.x * offset, norm.y * offset), 
+                                d_norm, box_half);
+        tip = ImVec2(p0.x + d_norm.x * t, p0.y + d_norm.y * t);
+      }
+      
+      ImVec2 tip_p1(tip.x - arrow_dir.x * 12.0f * zoom + arrow_dir.y * 6.0f * zoom,
+                    tip.y - arrow_dir.y * 12.0f * zoom - arrow_dir.x * 6.0f * zoom);
+      ImVec2 tip_p2(tip.x - arrow_dir.x * 12.0f * zoom - arrow_dir.y * 6.0f * zoom,
+                    tip.y - arrow_dir.y * 12.0f * zoom + arrow_dir.x * 6.0f * zoom);
+      dl->AddTriangleFilled(tip, tip_p1, tip_p2, line_col);
+    }
+  }
+
+  // Pass 2: Draw icons, text labels, and peer boxes.
+  for (const auto& peer : unique_peers) {
+    const ImVec2 peer_screen = to_screen(peer_positions[peer]);
+    const auto& conns = peer_connections[peer];
+    const int num_conns = static_cast<int>(conns.size());
+
+    ImVec2 dir(peer_screen.x - center_screen.x, peer_screen.y - center_screen.y);
+    const float len = std::hypot(dir.x, dir.y);
+    ImVec2 norm(0, 0);
+    ImVec2 d_norm(0, 0);
+    if (len > 0) {
+      d_norm = ImVec2(dir.x / len, dir.y / len);
+      norm = ImVec2(-d_norm.y, d_norm.x);
+    }
+
+    const float edge_spacing = 30.0f * zoom;
+    const float ir = std::max(5.0f, kIconR * zoom);
+
+    for (int j = 0; j < num_conns; ++j) {
+      const Connection* conn = conns[j];
+      const float offset = (j - (num_conns - 1) * 0.5f) * edge_spacing;
+      
+      const ImVec2 p0(center_screen.x + norm.x * offset, center_screen.y + norm.y * offset);
+      const ImVec2 p1(peer_screen.x + norm.x * offset, peer_screen.y + norm.y * offset);
+
+      const EdgeStatus st = conn->status();
+      const ImVec2 mid((p0.x + p1.x) * 0.5f, (p0.y + p1.y) * 0.5f);
+
+      ImVec2 up_norm(-d_norm.y, d_norm.x);
+      if (up_norm.y > 0) {
+        up_norm.x = -up_norm.x;
+        up_norm.y = -up_norm.y;
+      }
+
+      if (zoom >= kLabelHideZoom) {
+        const ImVec2 ts = font->CalcTextSizeA(label_fs, FLT_MAX, 0.0f, conn->topic.c_str());
+        ImVec2 tp_center(mid.x + up_norm.x * (ir + ts.y * 0.5f + 4.0f), 
+                         mid.y + up_norm.y * (ir + ts.y * 0.5f + 4.0f));
+        const ImVec2 tp(tp_center.x - ts.x * 0.5f, tp_center.y - ts.y * 0.5f);
+        dl->AddRectFilled(ImVec2(tp.x - 3, tp.y - 1), ImVec2(tp.x + ts.x + 3, tp.y + ts.y + 1),
+                          pal::panel, 3.0f);
+        dl->AddText(font, label_fs, tp, pal::text_dim, conn->topic.c_str());
+      }
+      const ImVec2 icon_c(mid.x, mid.y);
+      dl->AddCircleFilled(icon_c, ir + 2.0f, pal::panel);
+      draw_status_icon(dl, st, icon_c, ir);
+      icon_hits.push_back({icon_c, ir + 3.0f, conn});
+    }
+
+    draw_box(peer_screen, peer, pal::panel, pal::edge);
+    node_hits.push_back({peer_screen, box_half, peer});
   }
 
   // Center (selected) node, drawn last so it sits on top of edge ends.
@@ -194,7 +292,7 @@ std::string render_graph_view(const NodeView & view, GraphState & gs,
   }
 
   // Zoom hint / empty state.
-  if (slots.empty()) {
+  if (unique_peers.empty()) {
     const char * msg = "(no connections)";
     const ImVec2 ts = ImGui::CalcTextSize(msg);
     dl->AddText(ImVec2(center.x - ts.x * 0.5f, center.y + kBoxH), pal::text_dim, msg);
