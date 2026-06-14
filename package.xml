@@ -8,7 +8,7 @@
     broken topic links (QoS incompatibility, type mismatch, dead links).
   </description>
   <maintainer email="chittaranjan@dynorobotics.se">Chittaranjan Swaminathan</maintainer>
-  <license>Apache-2.0</license>
+  <license>GPL-3.0-only</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
