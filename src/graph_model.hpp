@@ -36,6 +36,16 @@ struct Connection {
   const std::string & sub_node()  const { return direction == Direction::Publishes ? peer_node : self_node; }
   const std::string & pub_type()  const { return direction == Direction::Publishes ? my_type  : peer_type; }
   const std::string & sub_type()  const { return direction == Direction::Publishes ? peer_type : my_type; }
+  const rclcpp::QoS  & pub_qos()  const { return direction == Direction::Publishes ? my_qos   : peer_qos; }
+
+  // Latched = the publisher offers TRANSIENT_LOCAL durability. Such topics emit
+  // once and the value is re-delivered to late joiners, so a steady rate is not
+  // expected: liveness probing is meaningless and must not flag them as dead.
+  bool latched() const
+  {
+    return pub_qos().get_rmw_qos_profile().durability ==
+           RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
+  }
 };
 
 struct NodeView {

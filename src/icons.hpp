@@ -18,9 +18,10 @@ ImU32 status_color(EdgeStatus s);
 // These are the always-available fallback; FontAwesome is toolbar-only polish.
 void draw_status_icon(ImDrawList * dl, EdgeStatus s, ImVec2 center, float r);
 
-// Load the base UI font: a system DejaVuSans (covers Latin + arrows/dashes/
-// bullets used in labels and popups) when available, else ImGui's built-in
-// bitmap default. Call once at startup before merging FontAwesome.
+// Load the base UI font: PT Sans (shipped in the package share dir) for the
+// interface, with DejaVuSans merged over it for the arrow/dash/bullet glyphs PT
+// Sans lacks. Falls back to whole-font DejaVuSans, then ImGui's built-in bitmap
+// default. Call once at startup before merging FontAwesome.
 void load_ui_font(float size_px);
 
 // Attempt to merge third_party/fonts/fa-solid-900.ttf into the ImGui atlas for

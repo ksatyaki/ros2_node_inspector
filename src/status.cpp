@@ -15,6 +15,9 @@ EdgeStatus compute_status(const Connection & c)
   if (!c.qos.compatible) {
     return EdgeStatus::QosMismatch;
   }
+  if (c.latched()) {
+    return EdgeStatus::Latched;  // retained value; rate is not meaningful
+  }
   if (!c.hz_known) {
     return EdgeStatus::Unknown;
   }
@@ -49,6 +52,9 @@ std::string status_detail(const Connection & c)
       break;
     case EdgeStatus::Dead:
       os << c.topic << ": QoS+type OK but no data in last 5 s (0 Hz)";
+      break;
+    case EdgeStatus::Latched:
+      os << c.topic << ": latched (TRANSIENT_LOCAL) — retained value, rate not monitored";
       break;
     case EdgeStatus::Ok:
       os << c.topic << ": live, " << fmt_hz(c.hz) << " Hz";
