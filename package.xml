@@ -14,7 +14,16 @@
 
   <depend>rclcpp</depend>
 
-  <!-- GUI deps are introduced in M2; M1 is backend + diagnostics only. -->
+  <!-- GUI (M2): package-share lookup for the optional font, plus system
+       GLFW/OpenGL. Dear ImGui is vendored under third_party/imgui (no rosdep key). -->
+  <depend>ament_index_cpp</depend>
+  <depend>libglfw3-dev</depend>
+  <depend>libgl1-mesa-dev</depend>
+
+  <!-- Demo graph (demo/) for exercising the GUI: rclpy nodes + a launch file. -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>ros2launch</exec_depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
 

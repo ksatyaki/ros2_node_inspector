@@ -9,7 +9,7 @@
 > ## Milestone status board
 > - [x] **M0 — Project setup** · gate: devcontainer opens, image builds, Claude runs inside, first commit exists *(no GUI, no unit tests — gate is "container comes up")*
 > - [x] **M1 — Backend & diagnostics** · gate: **unit tests pass** (non-GUI) *(28 gtests green + clean Humble build; Jazzy compile pending host-side `docker compose run` — docker is unavailable inside the Humble devcontainer)*
-> - [ ] **M2 — GUI: views, icons, dropdown counts** · gate: **human manual test run** (GUI)
+> - [ ] **M2 — GUI: views, icons, dropdown counts** · gate: **human manual test run** (GUI) *(implementation complete + clean Humble build; headless Xvfb/llvmpipe smoke-test renders dropdown, both views, status icons against live talker/listener. Human GUI gate + host-side Jazzy compile pending.)*
 
 **Goal:** A lightweight C++ GUI that lists every live ROS 2 node in a dropdown; on selecting a node, shows its direct connections (publishers/subscribers it talks to) in **two interchangeable views — a table and an ego graph** — each connection carrying a single status icon (**green tick** = healthy, **amber question** = QoS incompatible, **red cross** = type mismatch or dead) that, on click, opens a popup explaining the fault in plain language (e.g. "`/map`: publisher `node_a` offers TRANSIENT_LOCAL, subscriber `node_b` requests VOLATILE → incompatible"). So a developer can diagnose a broken topic link in seconds instead of polling the CLI.
 
@@ -348,14 +348,15 @@ Work one milestone per run (see Agent Protocol at top). Each lists its tasks and
 
 ### M2 — GUI: views, icons, dropdown counts  ·  gate: human manual test run (GUI)
 *Everything visual. Renders the M1 model.*
-- [ ] Vendor ImGui under `third_party/imgui`; wire core + `imgui_impl_glfw` + `imgui_impl_opengl3` into the target.
-- [ ] `main.cpp`: GLFW + OpenGL3 + ImGui bootstrap, background `rclcpp::spin` thread, single mutex, 500 ms refresh / per-frame redraw. Apply `palette.hpp`.
-- [ ] `icons`: vector tick/cross/?; attempt to obtain `fa-solid-900.ttf` — **if absent, PAUSE per the font protocol**, then continue with vector icons.
-- [ ] Dropdown with `✓N ?N ✗N` per-node counts.
-- [ ] `view_table`: two tables + status icons + click popup.
-- [ ] `view_graph`: radial ego layout (`ImDrawList`), pan/zoom, edge labels + icons, icon-click popup, click-to-recenter; Table|Graph toggle.
-- [ ] README: launch, `xhost`, host-OS X11 caveat, distro matrix, FontAwesome note.
+- [x] Vendor ImGui under `third_party/imgui` (v1.91.5, sources committed; examples/docs trimmed); wire core + `imgui_impl_glfw` + `imgui_impl_opengl3` into the target as a static `imgui` lib.
+- [x] `main.cpp`: GLFW + OpenGL3 + ImGui bootstrap. Threading refined vs. the original sketch: a single background **ROS thread** owns the node/executor/probe — it `spin_some`es and, every 500 ms, builds node list + counts + selected `NodeView` and publishes a snapshot under one mutex; the UI thread copies that snapshot under lock and renders (no rclcpp on the UI thread, no lock during ImGui). This keeps all subscription lifetimes on one thread, avoiding the create/destroy races the "background spin + shared model" note warned about. Per-frame redraw at vsync. `palette.hpp` applied.
+- [x] `icons`: vector tick/cross/? drawn with `ImDrawList`. `fa-solid-900.ttf` **was fetched** (FortAwesome 6.x) and is merged when present — no pause needed. Base UI font is system DejaVuSans (for `→ ← — ●` glyphs) with the ImGui bitmap default as fallback.
+- [x] Dropdown with `✓N ?N ✗N` per-node counts (FA glyphs when loaded, else `ok/?/x` letters), computed by the ROS thread for every node from `count_connections`.
+- [x] `view_table`: "Publishes →" / "← Subscribes" tables + clickable vector status icons + shared click popup.
+- [x] `view_graph`: radial ego layout (`ImDrawList`) — subscribers right, publishers left, selected node centered; pan (drag) / zoom-about-cursor (wheel); mid-edge topic labels (declutter below zoom 0.55) + status icons; screen-space hit-testing for icon-click popup and click-to-recenter; Table|Graph tab toggle.
+- [x] README: launch, `xhost`, host-OS X11 caveat, distro matrix, FontAwesome note.
 - [ ] **Gate (human):** run on a live `talker`/`listener` (+ deliberately mismatched QoS pair); confirm dropdown counts, both views, status icons, popups with correct sentences, click-to-recenter, pan/zoom. Then `docker compose run --rm app-jazzy colcon build` compiles. (Optional: run under TSan once to check the spin/UI race.)
+  - *Agent-side progress: clean Humble build + all 28 M1 tests still green. Headless Xvfb + llvmpipe smoke-test ran the full frame loop ~8 s against live talker/listener with no crash; screenshots confirm the dropdown, both table sections, the radial graph with edges/labels/icons, and the muted palette render correctly. **Still requires a human** to verify interactive behaviour (icon-click popups, click-to-recenter, pan/zoom) on a real display, plus the host-side Jazzy compile (docker is unavailable inside the Humble devcontainer).*
 
 ## Edge cases & risks
 

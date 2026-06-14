@@ -3,17 +3,26 @@ services:
     build: { context: ., args: [ "ROS_DISTRO=humble" ] }
     user: "1000:1000"
     network_mode: host                                   # DDS discovery
-    environment: [ "DISPLAY=${DISPLAY}" ]
+    environment:
+      - DISPLAY=${DISPLAY}
+      - XAUTHORITY=/tmp/.docker.xauth                    # see volume below
     command: sleep infinity                              # keep container alive for devcontainer exec
     volumes:
       - .:/home/ros/ws/src/ros2_node_inspector
-      - /tmp/.X11-unix:/tmp/.X11-unix                    # X11 (Linux host assumed)
+      - /tmp/.X11-unix:/tmp/.X11-unix                    # X11 socket (Linux host assumed)
+      # Share the host's X cookie so no `xhost +local:` is needed. Container UID
+      # 1000 == host UID 1000 + host networking keeps the cookie's user/host
+      # valid. Host must have a real Xauthority (true in any X login session).
+      - ${XAUTHORITY:-${HOME}/.Xauthority}:/tmp/.docker.xauth:ro
   app-jazzy:
     build: { context: ., args: [ "ROS_DISTRO=jazzy" ] }
     user: "1000:1000"
     network_mode: host
-    environment: [ "DISPLAY=${DISPLAY}" ]
+    environment:
+      - DISPLAY=${DISPLAY}
+      - XAUTHORITY=/tmp/.docker.xauth
     command: sleep infinity
     volumes:
       - .:/home/ros/ws/src/ros2_node_inspector
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - ${XAUTHORITY:-${HOME}/.Xauthority}:/tmp/.docker.xauth:ro
