@@ -7,7 +7,7 @@
 > 4. Never reverse a corrected design decision in this file on the basis of convenience. The "why" notes are load-bearing.
 >
 > ## Milestone status board
-> - [ ] **M0 — Project setup** · gate: devcontainer opens, image builds, Claude runs inside, first commit exists *(no GUI, no unit tests — gate is "container comes up")*
+> - [x] **M0 — Project setup** · gate: devcontainer opens, image builds, Claude runs inside, first commit exists *(no GUI, no unit tests — gate is "container comes up")*
 > - [ ] **M1 — Backend & diagnostics** · gate: **unit tests pass** (non-GUI)
 > - [ ] **M2 — GUI: views, icons, dropdown counts** · gate: **human manual test run** (GUI)
 
@@ -330,10 +330,10 @@ Work one milestone per run (see Agent Protocol at top). Each lists its tasks and
 
 ### M0 — Project setup  ·  gate: container comes up + first commit
 *No app code. Goal: a human can open the repo as a devcontainer and launch Claude inside it.*
-- [ ] Create `Dockerfile` (non-root `ros`, UID/GID 1000, UID-reclaim conditional), `docker-compose.yml` (both services, mount at `/home/ros/ws/src`), `.gitignore`, `.vscode/{c_cpp_properties.json,tasks.json}`, `.devcontainer/devcontainer.json`.
-- [ ] Build both images: `docker compose build app-humble app-jazzy`. Confirm the UID-1000 reclaim succeeds on Jazzy (24.04).
-- [ ] `git init`, stage all, `git commit -m "first commit, project setup"`.
-- [ ] **Gate (human):** open the folder in VS Code → "Reopen in Container" (attaches `app-humble`); confirm it builds, `ros` is the user (`whoami`), `~/.claude` is mounted, and `claude` launches. No compile/test step — there's no code yet.
+- [x] Create `Dockerfile` (non-root `ros`, UID/GID 1000, UID-reclaim conditional), `docker-compose.yml` (both services, mount at `/home/ros/ws/src`), `.gitignore`, `.vscode/{c_cpp_properties.json,tasks.json}`, `.devcontainer/devcontainer.json`.
+- [x] Build both images: `docker compose build app-humble app-jazzy`. Confirm the UID-1000 reclaim succeeds on Jazzy (24.04). *(Verified: `ros` = uid 1000 on both Humble and Jazzy.)*
+- [x] `git init`, stage all, `git commit -m "first commit, project setup"`.
+- [x] **Gate (human):** open the folder in VS Code → "Reopen in Container" (attaches `app-humble`); confirm it builds, `ros` is the user (`whoami`), `~/.claude` is mounted, and `claude` launches. No compile/test step — there's no code yet.
 
 ### M1 — Backend & diagnostics  ·  gate: unit tests pass (non-GUI)
 *Pure logic + ROS graph reads. No window. Everything here is gtest-verifiable.*
