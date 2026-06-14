@@ -1,0 +1,18 @@
+# colcon
+build/
+install/
+log/
+
+# compile DB symlink (if created at root)
+/compile_commands.json
+
+# editor / OS
+.cache/
+*.swp
+.DS_Store
+
+# vendored third-party build artifacts (keep sources, ignore builds)
+third_party/**/build/
+
+# downloaded font (large binary; user supplies per pause protocol)
+third_party/fonts/*.ttf

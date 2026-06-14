@@ -1,0 +1,22 @@
+// .devcontainer/devcontainer.json
+{
+  "name": "ros2_node_inspector (humble)",
+  "dockerComposeFile": ["../docker-compose.yml"],
+  "service": "app-humble",
+  "workspaceFolder": "/home/ros/ws/src/ros2_node_inspector",
+  "remoteUser": "ros",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {}
+  },
+  "mounts": [
+    // Claude Code config/auth/history — dev-only, host → container 'ros' home
+    "source=${localEnv:HOME}/.claude,target=/home/ros/.claude,type=bind",
+    "source=${localEnv:HOME}/.claude.json,target=/home/ros/.claude.json,type=bind"
+  ],
+  "postCreateCommand": "npm install -g @anthropic-ai/claude-code",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools", "ms-iot.vscode-ros"]
+    }
+  }
+}

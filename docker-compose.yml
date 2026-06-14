@@ -1,0 +1,17 @@
+services:
+  app-humble:
+    build: { context: ., args: [ "ROS_DISTRO=humble" ] }
+    user: "1000:1000"
+    network_mode: host                                   # DDS discovery
+    environment: [ "DISPLAY=${DISPLAY}" ]
+    volumes:
+      - .:/home/ros/ws/src/ros2_node_inspector
+      - /tmp/.X11-unix:/tmp/.X11-unix                    # X11 (Linux host assumed)
+  app-jazzy:
+    build: { context: ., args: [ "ROS_DISTRO=jazzy" ] }
+    user: "1000:1000"
+    network_mode: host
+    environment: [ "DISPLAY=${DISPLAY}" ]
+    volumes:
+      - .:/home/ros/ws/src/ros2_node_inspector
+      - /tmp/.X11-unix:/tmp/.X11-unix
