@@ -2,8 +2,8 @@
 Changelog for package connection_inspector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.0.0 (2026-06-15)
+------------------
 
 * Refinements
 * docs: add GPLv3 license and update package.xml
