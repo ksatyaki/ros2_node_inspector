@@ -8,7 +8,7 @@ each status:
   talker_3 / listener_3  on /demo_durability   VOLATILE pub vs TRANSIENT_LOCAL sub -> QoS "?" (durability)
 
 Run with:
-    ros2 launch ros2_node_inspector qos_demo.launch.py      # if installed
+    ros2 launch connection_inspector qos_demo.launch.py      # if installed
     ros2 launch ./demo/qos_demo.launch.py                   # straight from source
 
 Each node is a plain python3 invocation of qos_demo_node.py (no build/install

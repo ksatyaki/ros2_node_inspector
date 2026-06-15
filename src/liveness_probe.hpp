@@ -9,7 +9,7 @@
 
 #include "graph_model.hpp"
 
-namespace rni {
+namespace ci {
 
 // Pure trailing-window rate estimator. Records arrival timestamps (seconds) and
 // reports Hz over a trailing window. "known" becomes true once a full window has
@@ -93,4 +93,4 @@ private:
   std::map<std::string, Probe> probes_;  // keyed by topic name
 };
 
-}  // namespace rni
+}  // namespace ci

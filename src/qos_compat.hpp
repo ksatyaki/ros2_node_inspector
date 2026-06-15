@@ -4,7 +4,7 @@
 
 #include "rmw/types.h"
 
-namespace rni {
+namespace ci {
 
 // Result of a Request-vs-Offered QoS compatibility check.
 // Carries the FIRST failing policy and its offered/requested values so the
@@ -24,4 +24,4 @@ struct QosVerdict {
 QosVerdict check_qos_compat(const rmw_qos_profile_t & offered,
                             const rmw_qos_profile_t & requested);
 
-}  // namespace rni
+}  // namespace ci

@@ -4,7 +4,7 @@
 
 #include "status.hpp"
 
-namespace rni {
+namespace ci {
 
 // Map a composite EdgeStatus to its palette color (used by icons + edge tint).
 ImU32 status_color(EdgeStatus s);
@@ -33,4 +33,4 @@ bool try_load_fontawesome(float size_px);
 // True if try_load_fontawesome() succeeded this session.
 bool fontawesome_loaded();
 
-}  // namespace rni
+}  // namespace ci

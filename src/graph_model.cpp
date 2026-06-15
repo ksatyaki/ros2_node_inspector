@@ -6,7 +6,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-namespace rni {
+namespace ci {
 
 StatusCounts count_connections(const NodeView & view)
 {
@@ -70,6 +70,9 @@ NodeView build_node_view(rclcpp::Node & node,
   // --- Topics this node PUBLISHES; peers are subscribers. ---
   const auto pub_topics = graph->get_publisher_names_and_types_by_node(name, ns);
   for (const auto & [topic, types] : pub_topics) {
+    if (topic == "/parameter_events") {
+      continue;
+    }
     const std::string my_type = types.empty() ? std::string{} : types.front();
 
     const auto pub_infos = node.get_publishers_info_by_topic(topic);
@@ -102,6 +105,9 @@ NodeView build_node_view(rclcpp::Node & node,
   // --- Topics this node SUBSCRIBES; peers are publishers. ---
   const auto sub_topics = graph->get_subscriber_names_and_types_by_node(name, ns);
   for (const auto & [topic, types] : sub_topics) {
+    if (topic == "/parameter_events") {
+      continue;
+    }
     const std::string my_type = types.empty() ? std::string{} : types.front();
 
     const auto sub_infos = node.get_subscriptions_info_by_topic(topic);
@@ -134,4 +140,4 @@ NodeView build_node_view(rclcpp::Node & node,
   return view;
 }
 
-}  // namespace rni
+}  // namespace ci

@@ -7,7 +7,7 @@
 #include "graph_model.hpp"
 #include "views_common.hpp"
 
-namespace rni {
+namespace ci {
 
 // Persistent pan/zoom for the graph canvas (survives across frames/refreshes).
 struct GraphState {
@@ -25,4 +25,4 @@ struct GraphState {
 std::string render_graph_view(const NodeView & view, GraphState & gs,
                               StatusPopup & popup);
 
-}  // namespace rni
+}  // namespace ci

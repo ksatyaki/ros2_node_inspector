@@ -3,9 +3,9 @@
 #include "graph_model.hpp"
 #include "status.hpp"
 
-using rni::Connection;
-using rni::Direction;
-using rni::EdgeStatus;
+using ci::Connection;
+using ci::Direction;
+using ci::EdgeStatus;
 
 namespace {
 
@@ -71,7 +71,7 @@ TEST(Status, QosMismatchPopupNamesPubSubAndPolicy)
   auto c = healthy();
   c.direction = Direction::Publishes;  // self publishes, peer subscribes
   c.qos = {false, "durability", "TRANSIENT_LOCAL", "VOLATILE"};
-  const std::string s = rni::status_detail(c);
+  const std::string s = ci::status_detail(c);
   EXPECT_NE(s.find("publisher /node_a offers TRANSIENT_LOCAL"), std::string::npos);
   EXPECT_NE(s.find("subscriber /node_b requests VOLATILE"), std::string::npos);
   EXPECT_NE(s.find("durability incompatible"), std::string::npos);
@@ -84,7 +84,7 @@ TEST(Status, TypeMismatchPopupNamesBothTypes)
   c.my_type = "std_msgs/msg/String";
   c.peer_type = "std_msgs/msg/Int32";
   c.type_match = false;
-  const std::string s = rni::status_detail(c);
+  const std::string s = ci::status_detail(c);
   // peer is the publisher here
   EXPECT_NE(s.find("/node_b publishes std_msgs/msg/Int32"), std::string::npos);
   EXPECT_NE(s.find("/node_a subscribes as std_msgs/msg/String"), std::string::npos);

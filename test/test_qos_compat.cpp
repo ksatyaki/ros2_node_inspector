@@ -5,7 +5,7 @@
 
 #include "qos_compat.hpp"
 
-using rni::check_qos_compat;
+using ci::check_qos_compat;
 
 namespace {
 

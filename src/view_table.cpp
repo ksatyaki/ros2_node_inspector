@@ -7,7 +7,7 @@
 
 #include "palette.hpp"
 
-namespace rni {
+namespace ci {
 namespace {
 
 // Rate cell text: "30 Hz" when live, "DEAD" when proven silent, "—" while the
@@ -106,4 +106,4 @@ void render_table_view(const NodeView & view, StatusPopup & popup)
   draw_section("\xe2\x86\x90 Subscribes", view.subscribes, "tbl_sub", popup);
 }
 
-}  // namespace rni
+}  // namespace ci

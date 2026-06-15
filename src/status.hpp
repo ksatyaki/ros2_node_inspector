@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace rni {
+namespace ci {
 
 struct Connection;  // defined in graph_model.hpp
 
@@ -26,4 +26,4 @@ EdgeStatus compute_status(const Connection & c);
 // Plain-language popup text describing the connection's status.
 std::string status_detail(const Connection & c);
 
-}  // namespace rni
+}  // namespace ci

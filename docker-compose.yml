@@ -2,13 +2,15 @@ services:
   app-humble:
     build: { context: ., args: [ "ROS_DISTRO=humble" ] }
     user: "1000:1000"
-    network_mode: host                                   # DDS discovery
+    # network_mode: host                                   # DDS discovery
     environment:
       - DISPLAY=${DISPLAY}
       - XAUTHORITY=/tmp/.docker.xauth                    # see volume below
     command: sleep infinity                              # keep container alive for devcontainer exec
+    networks:
+      - ros
     volumes:
-      - .:/home/ros/ws/src/ros2_node_inspector
+      - .:/home/ros/ws/src/connection_inspector
       - /tmp/.X11-unix:/tmp/.X11-unix                    # X11 socket (Linux host assumed)
       # Share the host's X cookie so no `xhost +local:` is needed. Container UID
       # 1000 == host UID 1000 + host networking keeps the cookie's user/host
@@ -23,6 +25,11 @@ services:
       - XAUTHORITY=/tmp/.docker.xauth
     command: sleep infinity
     volumes:
-      - .:/home/ros/ws/src/ros2_node_inspector
+      - .:/home/ros/ws/src/connection_inspector
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ${XAUTHORITY:-${HOME}/.Xauthority}:/tmp/.docker.xauth:ro
+
+networks:
+  ros:
+    name: ros_network
+    external: true

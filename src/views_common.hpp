@@ -8,7 +8,7 @@
 #include "icons.hpp"
 #include "status.hpp"
 
-namespace rni {
+namespace ci {
 
 // Shared status-detail popup, opened by clicking a status icon in either view.
 // Click-driven (OpenPopup), dismissed on click-away. Same call site for table
@@ -78,4 +78,4 @@ inline bool icon_button(const char * id, ImVec2 top_left, float box)
   return ImGui::InvisibleButton(id, ImVec2(box, box));
 }
 
-}  // namespace rni
+}  // namespace ci

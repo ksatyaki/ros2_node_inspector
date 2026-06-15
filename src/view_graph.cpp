@@ -8,16 +8,15 @@
 
 #include "palette.hpp"
 
-namespace rni {
+namespace ci {
 namespace {
 
 // World-space layout constants (pre-zoom).
-constexpr float kBoxW = 180.0f;
-constexpr float kBoxH = 34.0f;
-constexpr float kColX = 340.0f;   // center -> side column, in world units
-constexpr float kRowY = 70.0f;    // vertical spacing between peers on a side
 constexpr float kIconR = 9.0f;    // status icon radius (world units)
 constexpr float kLabelHideZoom = 0.55f;  // below this, draw icon only
+constexpr float kConnSpacingY = 60.0f;   // Vertical space per connection (1.5x original)
+constexpr float kPeerGapY = 40.0f;       // Vertical gap between peer nodes
+constexpr float kBoxPadX = 30.0f;        // Horizontal padding inside box
 
 // (Layout removed)
 
@@ -66,17 +65,18 @@ std::string render_graph_view(const NodeView & view, GraphState & gs,
     gs.pan.y += io.MouseDelta.y;
   }
 
-  // Zoom about the cursor: keep the world point under the mouse fixed.
-  if (hovered && io.MouseWheel != 0.0f) {
-    const float old_zoom = gs.zoom;
-    gs.zoom = std::clamp(gs.zoom * std::pow(1.1f, io.MouseWheel), 0.25f, 4.0f);
-    const ImVec2 m = io.MousePos;
-    // world = (m - center - pan) / old_zoom ; keep it fixed at new zoom.
-    const float wx = (m.x - center.x - gs.pan.x) / old_zoom;
-    const float wy = (m.y - center.y - gs.pan.y) / old_zoom;
-    gs.pan.x = m.x - center.x - wx * gs.zoom;
-    gs.pan.y = m.y - center.y - wy * gs.zoom;
+  // Vertical scroll using mouse wheel to pan up/down instead of zoom
+  if (hovered) {
+    if (io.MouseWheel != 0.0f) {
+      gs.pan.y += io.MouseWheel * 40.0f;
+    }
+    if (io.MouseWheelH != 0.0f) {
+      gs.pan.x += io.MouseWheelH * 40.0f;
+    }
   }
+  
+  // Enforce constant zoom as requested
+  gs.zoom = 1.0f;
 
   const float zoom = gs.zoom;
   auto to_screen = [&](ImVec2 w) {
@@ -99,23 +99,54 @@ std::string render_graph_view(const NodeView & view, GraphState & gs,
   add_connections(view.publishes);
   add_connections(view.subscribes);
 
-  // Position peers in a circle
-  const int n_peers = unique_peers.size();
-  std::map<std::string, ImVec2> peer_positions;
-  const float PI = 3.14159265f;
-  for (int i = 0; i < n_peers; ++i) {
-    float angle = i * 2.0f * PI / std::max(1, n_peers) - PI / 2.0f;
-    peer_positions[unique_peers[i]] = ImVec2(kColX * std::cos(angle), kColX * std::sin(angle));
-  }
-
-  const ImVec2 box_half(kBoxW * 0.5f * zoom, kBoxH * 0.5f * zoom);
   const float label_fs = std::clamp(ImGui::GetFontSize() * zoom, 9.0f, 26.0f);
   ImFont * font = ImGui::GetFont();
 
-  auto draw_box = [&](ImVec2 c_screen, const std::string & label, ImU32 fill,
-                      ImU32 border) {
-    const ImVec2 a(c_screen.x - box_half.x, c_screen.y - box_half.y);
-    const ImVec2 b(c_screen.x + box_half.x, c_screen.y + box_half.y);
+  // Position peers in a transposed (left-to-right) layout
+  const int n_peers = unique_peers.size();
+  std::map<std::string, ImVec2> peer_positions;
+  std::map<std::string, ImVec2> peer_sizes;
+
+  float current_y = 0.0f;
+
+  for (const auto& peer : unique_peers) {
+    int num_conns = peer_connections[peer].size();
+    float h = std::max(40.0f, num_conns * kConnSpacingY + 20.0f);
+    float text_w = font->CalcTextSizeA(label_fs, FLT_MAX, 0.0f, peer.c_str()).x;
+    float w = std::max(100.0f, text_w + kBoxPadX);
+    peer_sizes[peer] = ImVec2(w, h);
+    current_y += h + kPeerGapY;
+  }
+
+  float total_height = std::max(0.0f, current_y - kPeerGapY);
+  float start_y = -total_height * 0.5f;
+  float py = start_y;
+
+  // X layout: Ego on left, Peers on right
+  float ego_text_w = font->CalcTextSizeA(label_fs, FLT_MAX, 0.0f, view.name.c_str()).x;
+  float ego_w = std::max(120.0f, ego_text_w + kBoxPadX);
+  float ego_h = std::max(80.0f, total_height + 40.0f);
+
+  // Position Ego and Peers based on window size
+  float ego_right_edge = std::max(-350.0f, -canvas_sz.x * 0.35f);
+  float peer_left_edge = std::min(350.0f, canvas_sz.x * 0.35f);
+  
+  float ego_x = ego_right_edge - ego_w * 0.5f;
+
+  for (int i = 0; i < n_peers; ++i) {
+    const auto& peer = unique_peers[i];
+    ImVec2 sz = peer_sizes[peer];
+    float cx = peer_left_edge + sz.x * 0.5f;
+    float cy = py + sz.y * 0.5f;
+    peer_positions[peer] = ImVec2(cx, cy);
+    py += sz.y + kPeerGapY;
+  }
+
+  ImVec2 ego_pos(ego_x, 0.0f);
+
+  auto draw_box = [&](ImVec2 c_screen, ImVec2 half_size, const std::string & label, ImU32 fill, ImU32 border) {
+    const ImVec2 a(c_screen.x - half_size.x, c_screen.y - half_size.y);
+    const ImVec2 b(c_screen.x + half_size.x, c_screen.y + half_size.y);
     dl->AddRectFilled(a, b, fill, 5.0f);
     dl->AddRect(a, b, border, 5.0f, 0, 1.5f);
     const ImVec2 ts = font->CalcTextSizeA(label_fs, FLT_MAX, 0.0f, label.c_str());
@@ -125,12 +156,13 @@ std::string render_graph_view(const NodeView & view, GraphState & gs,
     dl->PopClipRect();
   };
 
-  const ImVec2 center_screen = to_screen(ImVec2(0, 0));
+  const ImVec2 center_screen = to_screen(ego_pos);
+  const ImVec2 ego_half(ego_w * 0.5f * zoom, ego_h * 0.5f * zoom);
 
   // Records for screen-space hit-testing after drawing.
-  struct IconHit { ImVec2 c; float r; const Connection * conn; };
+  struct EdgeHit { ImVec2 min; ImVec2 max; const Connection * conn; };
   struct NodeHit { ImVec2 c; ImVec2 half; std::string fq; };
-  std::vector<IconHit> icon_hits;
+  std::vector<EdgeHit> edge_hits;
   std::vector<NodeHit> node_hits;
 
   // Pass 1: Draw lines and arrowheads.
@@ -138,24 +170,15 @@ std::string render_graph_view(const NodeView & view, GraphState & gs,
     const ImVec2 peer_screen = to_screen(peer_positions[peer]);
     const auto& conns = peer_connections[peer];
     const int num_conns = static_cast<int>(conns.size());
-
-    ImVec2 dir(peer_screen.x - center_screen.x, peer_screen.y - center_screen.y);
-    const float len = std::hypot(dir.x, dir.y);
-    ImVec2 norm(0, 0);
-    ImVec2 d_norm(0, 0);
-    if (len > 0) {
-      d_norm = ImVec2(dir.x / len, dir.y / len);
-      norm = ImVec2(-d_norm.y, d_norm.x);
-    }
-
-    const float edge_spacing = 30.0f * zoom;
+    ImVec2 sz = peer_sizes[peer];
+    const ImVec2 peer_half(sz.x * 0.5f * zoom, sz.y * 0.5f * zoom);
 
     for (int j = 0; j < num_conns; ++j) {
       const Connection* conn = conns[j];
-      const float offset = (j - (num_conns - 1) * 0.5f) * edge_spacing;
+      const float offset_y = (j - (num_conns - 1) * 0.5f) * kConnSpacingY * zoom;
       
-      const ImVec2 p0(center_screen.x + norm.x * offset, center_screen.y + norm.y * offset);
-      const ImVec2 p1(peer_screen.x + norm.x * offset, peer_screen.y + norm.y * offset);
+      const ImVec2 p0(center_screen.x, peer_screen.y + offset_y);
+      const ImVec2 p1(peer_screen.x, peer_screen.y + offset_y);
 
       const EdgeStatus st = conn->status();
       const ImU32 scol = status_color(st);
@@ -167,33 +190,14 @@ std::string render_graph_view(const NodeView & view, GraphState & gs,
       ImVec2 tip;
       ImVec2 arrow_dir;
       
-      auto box_intersect = [](ImVec2 start, ImVec2 d, ImVec2 half) -> float {
-        float t_min = FLT_MAX;
-        if (std::abs(d.x) > 1e-5f) {
-          float t1 = (half.x - start.x) / d.x;
-          float t2 = (-half.x - start.x) / d.x;
-          if (t1 > 0 && t1 < t_min) t_min = t1;
-          if (t2 > 0 && t2 < t_min) t_min = t2;
-        }
-        if (std::abs(d.y) > 1e-5f) {
-          float t1 = (half.y - start.y) / d.y;
-          float t2 = (-half.y - start.y) / d.y;
-          if (t1 > 0 && t1 < t_min) t_min = t1;
-          if (t2 > 0 && t2 < t_min) t_min = t2;
-        }
-        return t_min == FLT_MAX ? 0.0f : t_min;
-      };
-
       if (conn->direction == Direction::Publishes) {
-        arrow_dir = d_norm;
-        float t = box_intersect(ImVec2(norm.x * offset, norm.y * offset), 
-                                ImVec2(-d_norm.x, -d_norm.y), box_half);
-        tip = ImVec2(p1.x - d_norm.x * t, p1.y - d_norm.y * t);
+        // Ego to Peer -> Pointing right (x positive)
+        arrow_dir = ImVec2(1.0f, 0.0f);
+        tip = ImVec2(p1.x - peer_half.x, p1.y);
       } else {
-        arrow_dir = ImVec2(-d_norm.x, -d_norm.y);
-        float t = box_intersect(ImVec2(norm.x * offset, norm.y * offset), 
-                                d_norm, box_half);
-        tip = ImVec2(p0.x + d_norm.x * t, p0.y + d_norm.y * t);
+        // Peer to Ego -> Pointing left (x negative)
+        arrow_dir = ImVec2(-1.0f, 0.0f);
+        tip = ImVec2(p0.x + ego_half.x, p0.y);
       }
       
       ImVec2 tip_p1(tip.x - arrow_dir.x * 12.0f * zoom + arrow_dir.y * 6.0f * zoom,
@@ -209,56 +213,58 @@ std::string render_graph_view(const NodeView & view, GraphState & gs,
     const ImVec2 peer_screen = to_screen(peer_positions[peer]);
     const auto& conns = peer_connections[peer];
     const int num_conns = static_cast<int>(conns.size());
+    ImVec2 sz = peer_sizes[peer];
+    const ImVec2 peer_half(sz.x * 0.5f * zoom, sz.y * 0.5f * zoom);
 
-    ImVec2 dir(peer_screen.x - center_screen.x, peer_screen.y - center_screen.y);
-    const float len = std::hypot(dir.x, dir.y);
-    ImVec2 norm(0, 0);
-    ImVec2 d_norm(0, 0);
-    if (len > 0) {
-      d_norm = ImVec2(dir.x / len, dir.y / len);
-      norm = ImVec2(-d_norm.y, d_norm.x);
-    }
-
-    const float edge_spacing = 30.0f * zoom;
     const float ir = std::max(5.0f, kIconR * zoom);
 
     for (int j = 0; j < num_conns; ++j) {
       const Connection* conn = conns[j];
-      const float offset = (j - (num_conns - 1) * 0.5f) * edge_spacing;
+      const float offset_y = (j - (num_conns - 1) * 0.5f) * kConnSpacingY * zoom;
       
-      const ImVec2 p0(center_screen.x + norm.x * offset, center_screen.y + norm.y * offset);
-      const ImVec2 p1(peer_screen.x + norm.x * offset, peer_screen.y + norm.y * offset);
+      const ImVec2 p0(center_screen.x, peer_screen.y + offset_y);
+      const ImVec2 p1(peer_screen.x, peer_screen.y + offset_y);
 
       const EdgeStatus st = conn->status();
-      const ImVec2 mid((p0.x + p1.x) * 0.5f, (p0.y + p1.y) * 0.5f);
+      const ImVec2 mid((p0.x + p1.x) * 0.5f, p1.y);
 
-      ImVec2 up_norm(-d_norm.y, d_norm.x);
-      if (up_norm.y > 0) {
-        up_norm.x = -up_norm.x;
-        up_norm.y = -up_norm.y;
+      const bool draw_label = (zoom >= kLabelHideZoom);
+      ImVec2 ts(0, 0);
+      if (draw_label) {
+        ts = font->CalcTextSizeA(label_fs, FLT_MAX, 0.0f, conn->topic.c_str());
       }
 
-      if (zoom >= kLabelHideZoom) {
-        const ImVec2 ts = font->CalcTextSizeA(label_fs, FLT_MAX, 0.0f, conn->topic.c_str());
-        ImVec2 tp_center(mid.x + up_norm.x * (ir + ts.y * 0.5f + 4.0f), 
-                         mid.y + up_norm.y * (ir + ts.y * 0.5f + 4.0f));
-        const ImVec2 tp(tp_center.x - ts.x * 0.5f, tp_center.y - ts.y * 0.5f);
+      const float gap = 6.0f;
+      // total width of icon + text block
+      const float total_w = (draw_label) ? (ir * 2.0f + gap + ts.x) : (ir * 2.0f);
+      
+      // We want the ENTIRE block (icon + text) to be centered exactly at `mid.x`.
+      const float block_left = mid.x - total_w * 0.5f;
+      
+      // Icon is the left-most element
+      const ImVec2 icon_c(block_left + ir, mid.y);
+      
+      if (draw_label) {
+        const ImVec2 tp(block_left + ir * 2.0f + gap, mid.y - ts.y * 0.5f);
         dl->AddRectFilled(ImVec2(tp.x - 3, tp.y - 1), ImVec2(tp.x + ts.x + 3, tp.y + ts.y + 1),
                           pal::panel, 3.0f);
-        dl->AddText(font, label_fs, tp, pal::text_dim, conn->topic.c_str());
+        const ImU32 text_col = status_color(st);
+        dl->AddText(font, label_fs, tp, text_col, conn->topic.c_str());
       }
-      const ImVec2 icon_c(mid.x, mid.y);
       dl->AddCircleFilled(icon_c, ir + 2.0f, pal::panel);
       draw_status_icon(dl, st, icon_c, ir);
-      icon_hits.push_back({icon_c, ir + 3.0f, conn});
+      
+      ImVec2 hit_min(block_left - 3.0f, mid.y - std::max(ir + 3.0f, ts.y * 0.5f + 1.0f));
+      ImVec2 hit_max(mid.x + total_w * 0.5f + 3.0f, mid.y + std::max(ir + 3.0f, ts.y * 0.5f + 1.0f));
+      edge_hits.push_back({hit_min, hit_max, conn});
     }
 
-    draw_box(peer_screen, peer, pal::panel, pal::edge);
-    node_hits.push_back({peer_screen, box_half, peer});
+    draw_box(peer_screen, peer_half, peer, pal::panel, pal::edge);
+    node_hits.push_back({peer_screen, peer_half, peer});
   }
 
   // Center (selected) node, drawn last so it sits on top of edge ends.
-  draw_box(center_screen, view.name, pal::panel, pal::accent);
+  draw_box(center_screen, ego_half, view.name, pal::panel, pal::accent);
 
   dl->PopClipRect();
 
@@ -268,9 +274,8 @@ std::string render_graph_view(const NodeView & view, GraphState & gs,
     const ImVec2 m = io.MousePos;
     
     // Check hover for tooltips
-    for (const auto & h : icon_hits) {
-      const float dx = m.x - h.c.x, dy = m.y - h.c.y;
-      if (dx * dx + dy * dy <= h.r * h.r) {
+    for (const auto & h : edge_hits) {
+      if (m.x >= h.min.x && m.x <= h.max.x && m.y >= h.min.y && m.y <= h.max.y) {
         popup.request_hover(*h.conn);
         break;
       }
@@ -295,10 +300,10 @@ std::string render_graph_view(const NodeView & view, GraphState & gs,
   if (unique_peers.empty()) {
     const char * msg = "(no connections)";
     const ImVec2 ts = ImGui::CalcTextSize(msg);
-    dl->AddText(ImVec2(center.x - ts.x * 0.5f, center.y + kBoxH), pal::text_dim, msg);
+    dl->AddText(ImVec2(center.x - ts.x * 0.5f, center.y + 40.0f), pal::text_dim, msg);
   }
 
   return recenter;
 }
 
-}  // namespace rni
+}  // namespace ci

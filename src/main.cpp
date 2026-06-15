@@ -42,13 +42,13 @@ struct NodeEntry {
   std::string fq;    // fully-qualified "/ns/name"
   std::string name;  // bare node name
   std::string ns;    // namespace ("/" or "/ns")
-  rni::StatusCounts counts;
+  ci::StatusCounts counts;
 };
 
 struct Shared {
   std::mutex mtx;
   std::vector<NodeEntry> nodes;     // all live nodes + their type/QoS counts
-  rni::NodeView selected_view;      // ego view of the currently selected node
+  ci::NodeView selected_view;      // ego view of the currently selected node
   std::string selected_fq;          // which node selected_view describes
   std::string requested_fq;         // UI -> ROS: desired selection
   bool has_request = false;
@@ -76,7 +76,7 @@ void ros_thread(rclcpp::Node::SharedPtr node, Shared * sh)
 {
   rclcpp::executors::SingleThreadedExecutor exec;
   exec.add_node(node);
-  rni::LivenessProbe probe;
+  ci::LivenessProbe probe;
   std::string active_fq;  // node the probe is currently configured for
 
   auto last_refresh = std::chrono::steady_clock::now() -
@@ -114,7 +114,7 @@ void ros_thread(rclcpp::Node::SharedPtr node, Shared * sh)
         continue;
       }
 
-      e.counts = rni::count_connections(rni::build_node_view(*node, name, ns));
+      e.counts = ci::count_connections(ci::build_node_view(*node, name, ns));
       entries.push_back(std::move(e));
     }
 
@@ -128,11 +128,11 @@ void ros_thread(rclcpp::Node::SharedPtr node, Shared * sh)
     }
 
     // (Re)build the selected node's ego view + liveness probe.
-    rni::NodeView view;
+    ci::NodeView view;
     if (!want.empty()) {
       std::string ns, name;
       split_fq(want, ns, name);
-      view = rni::build_node_view(*node, name, ns);
+      view = ci::build_node_view(*node, name, ns);
       if (want != active_fq) {
         probe.clear();          // selection changed: drop old probes
         active_fq = want;
@@ -163,9 +163,9 @@ void ros_thread(rclcpp::Node::SharedPtr node, Shared * sh)
 // ---- Dropdown with per-node ✓N ?N ✗N counts ------------------------------
 
 // Inline colored counts. Uses FontAwesome glyphs if available, else letters.
-void draw_counts_inline(const rni::StatusCounts & c)
+void draw_counts_inline(const ci::StatusCounts & c)
 {
-  const bool fa = rni::fontawesome_loaded();
+  const bool fa = ci::fontawesome_loaded();
   ImGui::SameLine();
   ImGui::TextColored(pal::to_vec4(pal::ok), fa ? "\xef\x81\x98 %d" : "ok %d", c.ok);
   ImGui::SameLine();
@@ -202,7 +202,7 @@ void glfw_error(int err, const char * desc)
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<rclcpp::Node>("ros2_node_inspector_gui");
+  auto node = std::make_shared<rclcpp::Node>("connection_inspector_gui");
 
   Shared shared;
   std::thread ros(ros_thread, node, &shared);
@@ -237,15 +237,15 @@ int main(int argc, char ** argv)
   ImGui::GetIO().IniFilename = nullptr;  // don't litter an imgui.ini
   pal::apply_palette();
 
-  rni::load_ui_font(16.0f);          // DejaVuSans (Latin+arrows) or built-in
-  rni::try_load_fontawesome(14.0f);  // optional toolbar/legend glyphs (merged)
+  ci::load_ui_font(16.0f);          // DejaVuSans (Latin+arrows) or built-in
+  ci::try_load_fontawesome(14.0f);  // optional toolbar/legend glyphs (merged)
 
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init(glsl_version);
 
   // UI-side persistent state.
-  rni::StatusPopup popup;
-  rni::GraphState graph_state;
+  ci::StatusPopup popup;
+  ci::GraphState graph_state;
   std::string last_selected;
   int tab = 1;  // 0 = table, 1 = graph
   float font_size_px = 16.0f;
@@ -257,15 +257,15 @@ int main(int argc, char ** argv)
     if (needs_font_rebuild) {
       ImGui_ImplOpenGL3_DestroyFontsTexture();
       ImGui::GetIO().Fonts->Clear();
-      rni::load_ui_font(font_size_px);
-      rni::try_load_fontawesome(font_size_px * (14.0f / 16.0f));
+      ci::load_ui_font(font_size_px);
+      ci::try_load_fontawesome(font_size_px * (14.0f / 16.0f));
       ImGui_ImplOpenGL3_CreateFontsTexture();
       needs_font_rebuild = false;
     }
 
     // Copy the snapshot under lock; render from the copy (no lock during ImGui).
     std::vector<NodeEntry> nodes;
-    rni::NodeView view;
+    ci::NodeView view;
     std::string selected_fq;
     {
       std::lock_guard<std::mutex> lk(shared.mtx);
@@ -332,9 +332,9 @@ int main(int argc, char ** argv)
     if (selected_fq.empty()) {
       ImGui::TextDisabled("No nodes discovered yet…");
     } else if (tab == 0) {
-      rni::render_table_view(view, popup);
+      ci::render_table_view(view, popup);
     } else {
-      const std::string recenter = rni::render_graph_view(view, graph_state, popup);
+      const std::string recenter = ci::render_graph_view(view, graph_state, popup);
       if (!recenter.empty()) {
         std::lock_guard<std::mutex> lk(shared.mtx);
         shared.requested_fq = recenter;

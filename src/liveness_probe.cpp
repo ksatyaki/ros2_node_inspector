@@ -8,7 +8,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-namespace rni {
+namespace ci {
 namespace {
 
 double steady_now_sec()
@@ -118,4 +118,4 @@ void LivenessProbe::apply(NodeView & view) const
   for (auto & c : view.subscribes) fill(c);
 }
 
-}  // namespace rni
+}  // namespace ci

@@ -5,7 +5,7 @@
 
 #include "rmw/types.h"
 
-namespace rni {
+namespace ci {
 namespace {
 
 // --- Reliability -----------------------------------------------------------
@@ -160,4 +160,4 @@ QosVerdict check_qos_compat(const rmw_qos_profile_t & offered,
   return {true, "", "", ""};
 }
 
-}  // namespace rni
+}  // namespace ci

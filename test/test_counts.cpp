@@ -2,8 +2,8 @@
 
 #include "graph_model.hpp"
 
-using rni::Connection;
-using rni::NodeView;
+using ci::Connection;
+using ci::NodeView;
 
 namespace {
 
@@ -25,7 +25,7 @@ TEST(Counts, ClassifiesEachConnectionByTypeThenQos)
   v.subscribes.push_back(make(false, true));  // err (type)
   v.subscribes.push_back(make(false, false)); // err (type dominates qos)
 
-  auto counts = rni::count_connections(v);
+  auto counts = ci::count_connections(v);
   EXPECT_EQ(counts.ok, 1);
   EXPECT_EQ(counts.warn, 1);
   EXPECT_EQ(counts.err, 2);
@@ -40,7 +40,7 @@ TEST(Counts, LivenessIsExcludedFromCounts)
   dead.hz = 0.0;
   v.publishes.push_back(dead);
 
-  auto counts = rni::count_connections(v);
+  auto counts = ci::count_connections(v);
   EXPECT_EQ(counts.ok, 1);
   EXPECT_EQ(counts.warn, 0);
   EXPECT_EQ(counts.err, 0);
@@ -48,7 +48,7 @@ TEST(Counts, LivenessIsExcludedFromCounts)
 
 TEST(Counts, EmptyViewIsAllZero)
 {
-  auto counts = rni::count_connections(NodeView{});
+  auto counts = ci::count_connections(NodeView{});
   EXPECT_EQ(counts.ok, 0);
   EXPECT_EQ(counts.warn, 0);
   EXPECT_EQ(counts.err, 0);

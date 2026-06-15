@@ -2,7 +2,7 @@
 
 #include "liveness_probe.hpp"
 
-using rni::RateWindow;
+using ci::RateWindow;
 
 TEST(RateWindow, UnknownUntilWindowElapses)
 {

@@ -5,7 +5,7 @@
 
 #include "graph_model.hpp"
 
-namespace rni {
+namespace ci {
 
 EdgeStatus compute_status(const Connection & c)
 {
@@ -66,4 +66,4 @@ std::string status_detail(const Connection & c)
   return os.str();
 }
 
-}  // namespace rni
+}  // namespace ci

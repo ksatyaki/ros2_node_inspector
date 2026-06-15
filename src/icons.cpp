@@ -7,7 +7,7 @@
 
 #include "palette.hpp"
 
-namespace rni {
+namespace ci {
 namespace {
 bool g_fa_loaded = false;
 }
@@ -31,7 +31,8 @@ void draw_status_icon(ImDrawList * dl, EdgeStatus s, ImVec2 c, float r)
   const float th = (r * 0.34f) < 1.5f ? 1.5f : r * 0.34f;
 
   switch (s) {
-    case EdgeStatus::Ok: {
+    case EdgeStatus::Ok:
+    case EdgeStatus::Latched: {
       // Checkmark: down-stroke then up-stroke.
       dl->AddLine(ImVec2(c.x - 0.55f * r, c.y + 0.05f * r),
                   ImVec2(c.x - 0.10f * r, c.y + 0.50f * r), col, th);
@@ -56,11 +57,6 @@ void draw_status_icon(ImDrawList * dl, EdgeStatus s, ImVec2 c, float r)
       const ImVec2 sz = font->CalcTextSizeA(fsz, FLT_MAX, 0.0f, "?");
       dl->AddText(font, fsz, ImVec2(c.x - sz.x * 0.5f, c.y - sz.y * 0.5f),
                   pal::bg, "?");
-      break;
-    }
-    case EdgeStatus::Latched: {
-      // Filled dot: a retained/pinned value, distinct from the live tick.
-      dl->AddCircleFilled(c, r * 0.7f, col);
       break;
     }
     case EdgeStatus::Unknown: {
@@ -128,7 +124,7 @@ void load_ui_font(float size_px)
   };
   std::string pt_sans;
   try {
-    pt_sans = ament_index_cpp::get_package_share_directory("ros2_node_inspector") +
+    pt_sans = ament_index_cpp::get_package_share_directory("connection_inspector") +
               "/fonts/PT_Sans-Web-Regular.ttf";
   } catch (...) {
     pt_sans.clear();
@@ -161,7 +157,7 @@ bool try_load_fontawesome(float size_px)
 {
   std::string ttf;
   try {
-    ttf = ament_index_cpp::get_package_share_directory("ros2_node_inspector") +
+    ttf = ament_index_cpp::get_package_share_directory("connection_inspector") +
           "/fonts/fa-solid-900.ttf";
   } catch (...) {
     return false;
@@ -184,4 +180,4 @@ bool fontawesome_loaded()
   return g_fa_loaded;
 }
 
-}  // namespace rni
+}  // namespace ci

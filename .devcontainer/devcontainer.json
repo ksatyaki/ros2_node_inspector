@@ -1,9 +1,9 @@
 // .devcontainer/devcontainer.json
 {
-  "name": "ros2_node_inspector (humble)",
+  "name": "connection_inspector (humble)",
   "dockerComposeFile": ["../docker-compose.yml"],
   "service": "app-humble",
-  "workspaceFolder": "/home/ros/ws/src/ros2_node_inspector",
+  "workspaceFolder": "/home/ros/ws/src/connection_inspector",
   "remoteUser": "ros",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {}

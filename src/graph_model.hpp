@@ -8,7 +8,7 @@
 #include "qos_compat.hpp"
 #include "status.hpp"
 
-namespace rni {
+namespace ci {
 
 // Direction of a connection relative to the owning (selected) node.
 //   Publishes  : the owning node publishes the topic; the peer subscribes.
@@ -73,4 +73,4 @@ NodeView build_node_view(rclcpp::Node & node,
                          const std::string & name,
                          const std::string & ns);
 
-}  // namespace rni
+}  // namespace ci

@@ -17,20 +17,20 @@
 
 namespace {
 
-const char * status_word(rni::EdgeStatus s)
+const char * status_word(ci::EdgeStatus s)
 {
   switch (s) {
-    case rni::EdgeStatus::Ok:           return "OK   ";
-    case rni::EdgeStatus::Latched:      return "LATCH";
-    case rni::EdgeStatus::QosMismatch:  return "QOS? ";
-    case rni::EdgeStatus::TypeMismatch: return "TYPEX";
-    case rni::EdgeStatus::Dead:         return "DEAD ";
-    case rni::EdgeStatus::Unknown:      return "?    ";
+    case ci::EdgeStatus::Ok:           return "OK   ";
+    case ci::EdgeStatus::Latched:      return "LATCH";
+    case ci::EdgeStatus::QosMismatch:  return "QOS? ";
+    case ci::EdgeStatus::TypeMismatch: return "TYPEX";
+    case ci::EdgeStatus::Dead:         return "DEAD ";
+    case ci::EdgeStatus::Unknown:      return "?    ";
   }
   return "?    ";
 }
 
-void print_edges(const char * heading, const std::vector<rni::Connection> & edges)
+void print_edges(const char * heading, const std::vector<ci::Connection> & edges)
 {
   std::printf("  %s\n", heading);
   if (edges.empty()) {
@@ -39,7 +39,7 @@ void print_edges(const char * heading, const std::vector<rni::Connection> & edge
   for (const auto & c : edges) {
     std::printf("    [%s] %s  ->  %s   %s\n",
                 status_word(c.status()), c.topic.c_str(),
-                c.peer_node.c_str(), rni::status_detail(c).c_str());
+                c.peer_node.c_str(), ci::status_detail(c).c_str());
   }
 }
 
@@ -48,7 +48,7 @@ void print_edges(const char * heading, const std::vector<rni::Connection> & edge
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<rclcpp::Node>("ros2_node_inspector_cli");
+  auto node = std::make_shared<rclcpp::Node>("connection_inspector_cli");
 
   // Let discovery settle.
   rclcpp::executors::SingleThreadedExecutor exec;
@@ -73,15 +73,15 @@ int main(int argc, char ** argv)
   const std::string name = argv[1];
   const std::string ns = argc >= 3 ? argv[2] : "/";
 
-  auto view = rni::build_node_view(*node, name, ns);
-  rni::LivenessProbe probe;
+  auto view = ci::build_node_view(*node, name, ns);
+  ci::LivenessProbe probe;
   probe.reconfigure(*node, view);
 
   std::printf("Inspecting %s — measuring liveness for ~6 s…\n", view.name.c_str());
   std::this_thread::sleep_for(std::chrono::seconds(6));
 
   probe.apply(view);
-  const auto counts = rni::count_connections(view);
+  const auto counts = ci::count_connections(view);
   std::printf("Node %s   (type/QoS counts: ok=%d warn=%d err=%d)\n",
               view.name.c_str(), counts.ok, counts.warn, counts.err);
   print_edges("Publishes ->", view.publishes);

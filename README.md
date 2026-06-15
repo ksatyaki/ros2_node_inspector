@@ -1,4 +1,4 @@
-# ros2_node_inspector
+# connection_inspector
 
 A lightweight C++ GUI that lists every live ROS 2 node and, on selecting one,
 shows its direct connections (publishers/subscribers it talks to) in two
@@ -25,7 +25,7 @@ This is a standard `ament_cmake` package. From the colcon workspace root
 (`/home/ros/ws` inside the devcontainer):
 
 ```bash
-colcon build --packages-select ros2_node_inspector --merge-install
+colcon build --packages-select connection_inspector --merge-install
 source install/setup.bash
 ```
 
@@ -38,7 +38,7 @@ Dear ImGui is vendored under `third_party/imgui` — no extra fetch step.
 The GUI is an X11 app. On a **Linux host**, just launch it:
 
 ```bash
-ros2 run ros2_node_inspector node_inspector
+ros2 run connection_inspector connection_inspector
 ```
 
 No `xhost +local:` is needed: `docker-compose.yml` bind-mounts your host's X
@@ -70,7 +70,7 @@ A ready-made demo graph (`demo/`) brings up three named pairs — one healthy an
 two with deliberate QoS faults — so every status icon shows up at once:
 
 ```bash
-ros2 launch ros2_node_inspector qos_demo.launch.py
+ros2 launch connection_inspector qos_demo.launch.py
 # or straight from source, no install needed:
 ros2 launch ./demo/qos_demo.launch.py
 ```
@@ -101,7 +101,7 @@ non-interactively (no daily-dev surface):
 
 ```bash
 docker compose run --rm app-jazzy \
-  colcon build --packages-select ros2_node_inspector --merge-install
+  colcon build --packages-select connection_inspector --merge-install
 ```
 
 The code uses C++20 but avoids `std::format` (lands in GCC 13) so it builds on
