@@ -18,7 +18,7 @@
        GLFW/OpenGL. Dear ImGui is vendored under third_party/imgui (no rosdep key). -->
   <depend>ament_index_cpp</depend>
   <depend>libglfw3-dev</depend>
-  <depend>libgl1-mesa-dev</depend>
+  <depend>opengl</depend>
 
   <!-- Demo graph (demo/) for exercising the GUI: rclpy nodes + a launch file. -->
   <exec_depend>rclpy</exec_depend>
