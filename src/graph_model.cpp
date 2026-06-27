@@ -11,20 +11,16 @@ namespace ci {
 StatusCounts count_connections(const NodeView & view)
 {
   StatusCounts counts;
+  // Type + QoS only; liveness is deliberately excluded (see header). Type
+  // mismatch dominates QoS. Using c.status() here would fold in the Dead/Unknown
+  // liveness verdicts, which must not affect these graph-metadata counts.
   auto classify = [&counts](const Connection & c) {
-    switch (c.status()) {
-      case EdgeStatus::Ok:
-      case EdgeStatus::Latched:
-      case EdgeStatus::Unknown:
-        ++counts.ok;
-        break;
-      case EdgeStatus::QosMismatch:
-        ++counts.warn;
-        break;
-      case EdgeStatus::TypeMismatch:
-      case EdgeStatus::Dead:
-        ++counts.err;
-        break;
+    if (!c.type_match) {
+      ++counts.err;
+    } else if (!c.qos.compatible) {
+      ++counts.warn;
+    } else {
+      ++counts.ok;
     }
   };
   for (const auto & c : view.publishes) classify(c);
